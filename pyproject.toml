@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.8"
 aiohttp = "^3.7.4"
-quart = "^0.15.1"
+quart = "^0.18.3"
 
 [tool.poetry.dev-dependencies]
 black = "^21.6b0"
