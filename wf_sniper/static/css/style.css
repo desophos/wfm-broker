@@ -1,0 +1,27 @@
+body {
+    background-color: darkgray;
+    color: black;
+    font-size: large;
+    display: flex;
+    flex-direction: column;
+}
+
+div {
+    margin: 0px 10px;
+}
+
+div.order {
+    display: inline-flex;
+    align-items: center;
+    margin: 10px 10px;
+    background-color: lightgray;
+}
+
+div.text {
+    flex: auto;
+}
+
+div.done,
+div.copy {
+    flex: none;
+}
