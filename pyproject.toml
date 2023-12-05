@@ -13,6 +13,9 @@ quart = "^0.15.1"
 [tool.poetry.dev-dependencies]
 black = "^21.6b0"
 
+[tool.poetry.scripts]
+start = "wf_sniper:run"
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"

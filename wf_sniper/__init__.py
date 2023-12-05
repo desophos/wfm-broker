@@ -47,3 +47,7 @@ async def ws():
     except asyncio.CancelledError:
         await websocket.close(1000)
         raise
+
+
+def run():
+    asyncio.run(app.run_task())
