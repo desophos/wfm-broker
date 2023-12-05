@@ -1,6 +1,78 @@
 import json
-from quart import g
+from logging import getLogger
+from typing import Any, Callable, Mapping
+
 import aiohttp
+from quart import g
+
+logger = getLogger(__name__)
+
+class Order:
+    FIELDS = [
+        "id",
+        "platinum",
+        "quantity",
+        "order_type",
+        "platform",
+        "region",
+        "creation_date",
+        "last_update",
+        "user",
+        "item",
+    ]
+
+    def __init__(self, data: Mapping[str, Any]):
+        self.data = {}
+        for key in self.FIELDS:
+            if key in data:
+                self.data[key] = data[key]
+            else:
+                raise InvalidOrderError(self, f"key '{key}' not found in order data")
+
+        if self["platinum"] < 1:
+            raise InvalidOrderError(
+                self, f"platinum must be >= 1, not {self['platinum']}"
+            )
+
+    def __getitem__(self, key: str):
+        return self.data[key]
+
+    def __setitem__(self, key: str, val):
+        self.data[key] = val
+
+    def __str__(self) -> str:
+        return self.id
+
+
+class InvalidOrderError(Exception):
+    def __init__(self, order, msg):
+        self.order = order
+        self.message = f"Invalid order with ID {order.id}: {msg}"
+
+
+class InvalidCriteriaError(Exception):
+    def __init__(self, criteria, msg):
+        self.criteria = criteria
+        self.message = f"Invalid criteria: {msg}"
+
+
+async def get_ducats():
+    if not hasattr(g, "ducats"):
+        async with aiohttp.ClientSession(
+            headers={"platform": "pc", "language": "en"}
+        ) as session:
+
+            async with session.get(
+                "https://api.warframe.market/v1/tools/ducats"
+            ) as response:
+
+                response = await response.json()
+
+                g.ducats = {
+                    entry["item"]: entry["ducats"]
+                    for entry in response["payload"]["previous_day"]
+                }
+    return g.ducats
 
 
 async def subscribe():
@@ -18,50 +90,33 @@ async def subscribe():
                 yield message
 
 
-async def process_order(order, criteria={}):
-    if (
-        order["order_type"] == "sell"
-        and order["platform"] == "pc"
-        and order["region"] == "en"
-        and "prime" in order["item"]["tags"]
-        and "mod" not in order["item"]["tags"]
-        and "set" not in order["item"]["tags"]
-    ):
-        try:
-            item_ducats = (await ducats())[order["item"]["id"]]
-            order_ratio = item_ducats / order["platinum"]
+async def process_order(order_data, criteria: Mapping[str, Callable[[Any], Any]] = {}):
+    order = Order(order_data)
 
-            if order_ratio < 8.0 or (  # TODO: TEMPORARY MAGIC NUMBER
-                order["platinum"] == 1 and order["quantity"] != 1
-            ):
-                # ratio isn't good enough for us or
-                # user accidentally swapped price and quantity
-                return None
+    try:
+        ducats = (await get_ducats()).get(order["item"]["id"], 0)
+        order["item"]["ducats"] = ducats
+
+        ratio = ducats / order["platinum"]
+        order["ratio"] = ratio
+
+        valid = True
+        for key, fn in criteria.items():
+            if key == "order":
+                valid = valid and fn(order)
             else:
-                order["ratio"] = order_ratio
-                order["item"]["ducats"] = item_ducats
-                return order
+                try:
+                    valid = valid and fn(order[key])
+                except KeyError as e:
+                    raise InvalidCriteriaError(
+                        criteria, f"'{key}' is not a valid order field"
+                    ) from e
 
-        except KeyError:
-            with open("error.log", "a") as f:
-                json.dump(order, f)
-                return None
+        return order if valid else None
 
-
-async def ducats():
-    if not hasattr(g, "ducats"):
-        async with aiohttp.ClientSession(
-            headers={"platform": "pc", "language": "en"}
-        ) as session:
-
-            async with session.get(
-                "https://api.warframe.market/v1/tools/ducats"
-            ) as response:
-
-                response = await response.json()
-
-                g.ducats = {
-                    entry["item"]: entry["ducats"]
-                    for entry in response["payload"]["previous_day"]
-                }
-    return g.ducats
+    except KeyError as e:
+        with open("error.log", "a") as f:
+            msg = f"KeyError({str(e)}): {json.dumps(order.data, f)}"
+            logger.error(msg)
+            f.write(msg + "\n")
+            return None
