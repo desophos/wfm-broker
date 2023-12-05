@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "wf-sniper"
+name = "wfm-broker"
 version = "0.1.0"
 description = "Notifications for new warframe.market orders matching criteria."
 authors = ["desophos <1887450+desophos@users.noreply.github.com>"]
@@ -15,7 +15,7 @@ pytest-asyncio = "^0.15.1"
 black = "^21.6b0"
 
 [tool.poetry.scripts]
-start = "wf_sniper:run"
+start = "wfm_broker:run"
 
 [build-system]
 requires = ["poetry>=0.12"]

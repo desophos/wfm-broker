@@ -2,7 +2,7 @@ from operator import truth
 
 import pytest
 from quart import g
-from wf_sniper.market import get_ducats, process_order, subscribe
+from wfm_broker.market import get_ducats, process_order, subscribe
 
 from tests.conftest import dummy_order
 

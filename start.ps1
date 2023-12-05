@@ -1,2 +1,2 @@
-$env:QUART_APP = "wf_sniper"
+$env:QUART_APP = "wfm_broker"
 poetry run quart run

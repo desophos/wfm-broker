@@ -3,8 +3,7 @@ from functools import partial
 from operator import eq, gt, not_, truth
 
 from quart import Quart, render_template, websocket
-
-from wf_sniper import market
+from wfm_broker import market
 
 app = Quart(__name__)
 
